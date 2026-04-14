@@ -1,2 +1,6 @@
+FROM base
 WORKDIR /app
+ENV NAME=Sneha
 COPY test.txt test.txt
+RUN echo "Hello $NAME"
+CMD python app.py
