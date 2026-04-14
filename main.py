@@ -1,19 +1,14 @@
-# main.py
-
 from core.parser import parse_docksmithfile
+from core.executor import execute_instructions
 
 def main():
-    filepath = "Docksmithfile"
+    instructions = parse_docksmithfile("Docksmithfile")
 
-    try:
-        instructions = parse_docksmithfile(filepath)
+    layers = execute_instructions(instructions)
 
-        print("\nParsed Instructions:\n")
-        for instr, arg in instructions:
-            print(f"{instr} -> {arg}")
-
-    except Exception as e:
-        print(f"Error: {e}")
+    print("\nFinal Layers:")
+    for l in layers:
+        print(l)
 
 if __name__ == "__main__":
     main()

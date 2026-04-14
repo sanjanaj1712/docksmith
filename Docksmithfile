@@ -1,5 +1,2 @@
-FROM ubuntu:20.04
 WORKDIR /app
-COPY . .
-RUN echo "Hello Docksmith"
-CMD python app.py
+COPY test.txt test.txt
