@@ -1,1 +1,5 @@
+<<<<<<< HEAD
+hello docksmith
+=======
 hello sneha
+>>>>>>> origin/586
