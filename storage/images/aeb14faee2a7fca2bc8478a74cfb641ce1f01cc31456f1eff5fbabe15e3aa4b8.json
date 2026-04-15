@@ -1,0 +1,11 @@
+{
+  "layers": [
+    "00923d53427a08f34f92940357040891f14e4bdcba5129599c70959f0d4102fe",
+    "00923d53427a08f34f92940357040891f14e4bdcba5129599c70959f0d4102fe"
+  ],
+  "env": {
+    "NAME": "Sneha"
+  },
+  "cmd": "python app.py",
+  "workdir": "temp_fs/app"
+}
