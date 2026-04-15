@@ -1,0 +1,6 @@
+FROM alpine
+WORKDIR /app
+COPY . /app
+RUN echo "build step working" > build.txt
+ENV TEST=123
+CMD ["python3", "app.py"]
