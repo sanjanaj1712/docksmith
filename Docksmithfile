@@ -1,4 +1,4 @@
-FROM base
+FROM ubuntu
 WORKDIR /app
 ENV NAME=Sneha
 COPY test.txt test.txt

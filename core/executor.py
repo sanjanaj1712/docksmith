@@ -14,6 +14,15 @@ def reset_filesystem():
     os.makedirs(FS_ROOT)
 
 
+def log_step(message):
+    print(f"\n→ {message}")
+
+
+def handle_from(arg, state):
+    print(f"[BASE IMAGE] Using {arg}")
+    state["prev_layer"] = arg
+
+
 def handle_workdir(path, state):
     full_path = os.path.join(FS_ROOT, path.lstrip("/"))
     os.makedirs(full_path, exist_ok=True)
@@ -21,8 +30,11 @@ def handle_workdir(path, state):
 
 
 def handle_env(args, state):
-    key, value = args.split("=", 1)
-    state["env"][key] = value
+    try:
+        key, value = args.split("=", 1)
+        state["env"][key] = value
+    except:
+        print("[ERROR] Invalid ENV format")
 
 
 def handle_cmd(args, state):
@@ -30,33 +42,59 @@ def handle_cmd(args, state):
 
 
 def handle_copy(args, state):
-    src, dest = args.split()
+    try:
+        src, dest = args.split()
+    except:
+        print("[ERROR] COPY format invalid")
+        return None
+
+    if not os.path.exists(src):
+        print(f"[ERROR] Source not found: {src}")
+        return None
+
     dest_path = os.path.join(state["workdir"], dest)
 
-    if os.path.isdir(src):
-        shutil.copytree(src, dest_path, dirs_exist_ok=True)
-    else:
-        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-        shutil.copy2(src, dest_path)
+    try:
+        if os.path.isdir(src):
+            shutil.copytree(src, dest_path, dirs_exist_ok=True)
+        else:
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            shutil.copy2(src, dest_path)
 
-    return create_layer(FS_ROOT)
+        print("  ✔ COPY completed")
+        return create_layer(FS_ROOT)
+
+    except Exception as e:
+        print(f"[ERROR] COPY failed: {e}")
+        return None
 
 
 def handle_run(command, state):
     env = os.environ.copy()
     env.update(state["env"])
 
-    subprocess.run(
-        command,
-        shell=True,
-        cwd=state["workdir"],
-        env=env
-    )
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            cwd=state["workdir"],
+            env=env
+        )
 
-    return create_layer(FS_ROOT)
+        if result.returncode != 0:
+            print("[ERROR] RUN command failed")
+            return None
+
+        print("  ✔ RUN executed")
+        return create_layer(FS_ROOT)
+
+    except Exception as e:
+        print(f"[ERROR] RUN failed: {e}")
+        return None
 
 
 def execute_instructions(instructions, use_cache=True):
+    print("\n[BUILD START]")
     reset_filesystem()
 
     state = {
@@ -69,9 +107,12 @@ def execute_instructions(instructions, use_cache=True):
     layers = []
 
     for instr, arg in instructions:
-        print(f"\n>>> {instr} {arg}")
+        log_step(f"{instr} {arg}")
 
-        if instr == "WORKDIR":
+        if instr == "FROM":
+            handle_from(arg, state)
+
+        elif instr == "WORKDIR":
             handle_workdir(arg, state)
 
         elif instr == "ENV":
@@ -91,7 +132,7 @@ def execute_instructions(instructions, use_cache=True):
             if use_cache:
                 cached = get_cached_layer(cache_key)
                 if cached:
-                    print(f"[CACHE HIT] {cached}")
+                    print(f"  ⚡ CACHE HIT: {cached}")
                     state["prev_layer"] = cached
                     layers.append(cached)
                     continue
@@ -101,12 +142,13 @@ def execute_instructions(instructions, use_cache=True):
             else:
                 layer = handle_run(arg, state)
 
-            store_cache(cache_key, layer)
-
-            state["prev_layer"] = layer
-            layers.append(layer)
+            if layer:
+                store_cache(cache_key, layer)
+                state["prev_layer"] = layer
+                layers.append(layer)
 
         else:
-            print(f"[SKIP] {instr}")
+            print(f"[WARNING] Unknown instruction: {instr}")
 
+    print("\n[BUILD COMPLETE]")
     return layers, state
