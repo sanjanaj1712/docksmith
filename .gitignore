@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# Local test/build state
+temp_fs/
+storage/layers/
+storage/images/
+*.tar
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Byte-compiled / cache
+*.pyc

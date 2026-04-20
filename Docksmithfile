@@ -1,15 +1,7 @@
-<<<<<<< HEAD
 FROM alpine
+
 WORKDIR /app
-COPY . /app
-RUN echo "build step working" > build.txt
-ENV TEST=123
+COPY app.py /app
+RUN echo "Build step executed" > build.txt
+ENV MY_VAR=hello
 CMD ["python3", "app.py"]
-=======
-FROM ubuntu
-WORKDIR /app
-ENV NAME=Sneha
-COPY test.txt test.txt
-RUN echo "Hello $NAME"
-CMD python app.py
->>>>>>> origin/586

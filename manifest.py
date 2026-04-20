@@ -1,37 +1,36 @@
-import json
 import os
-from datetime import datetime
+import json
 import hashlib
+from datetime import datetime
 
 
-def create_manifest(name_tag, layers, config):
-    name, tag = name_tag.split(":")
+def create_manifest(tag, layers, config, created=None):
+    name, version = tag.split(":")
+
+    if created is None:
+        created = datetime.utcnow().isoformat()
 
     manifest = {
         "name": name,
-        "tag": tag,
-        "digest": "",
-        "created": datetime.utcnow().isoformat(),
+        "tag": version,
+        "created": created,
+        "digest": "",  # placeholder for digest computation
         "config": config,
-        "layers": [{"digest": l} for l in layers]
+        "layers": layers  # already list of dicts with digest/size/createdBy
     }
 
-    # Compute digest (without digest field)
-    temp_manifest = manifest.copy()
-    temp_manifest["digest"] = ""
+    # Compute digest from canonical form (digest field = "")
+    manifest_bytes = json.dumps(manifest, sort_keys=True).encode()
+    digest = "sha256:" + hashlib.sha256(manifest_bytes).hexdigest()
 
-    manifest_bytes = json.dumps(temp_manifest, sort_keys=True).encode()
-    digest = hashlib.sha256(manifest_bytes).hexdigest()
+    # Write final manifest with real digest
+    manifest["digest"] = digest
 
-    manifest["digest"] = "sha256:" + digest
-
-    # Save manifest
     images_dir = os.path.expanduser("~/.docksmith/images")
     os.makedirs(images_dir, exist_ok=True)
 
-    file_path = os.path.join(images_dir, f"{name}_{tag}.json")
-
-    with open(file_path, "w") as f:
+    manifest_path = os.path.join(images_dir, f"{name}_{version}.json")
+    with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=4)
 
-    return manifest["digest"]
+    return digest

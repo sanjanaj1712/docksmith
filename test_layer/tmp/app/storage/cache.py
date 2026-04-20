@@ -32,19 +32,8 @@ def save_cache(cache):
         json.dump(cache, f, indent=2)
 
 
-def _env_to_canonical(e):
-    # env can be dict, list/tuple of 'K=V' strings, or a string
-    if isinstance(e, dict):
-        items = [f"{k}={e[k]}" for k in sorted(e.keys())]
-        return "|".join(items)
-    if isinstance(e, (list, tuple)):
-        return "|".join(sorted([str(x) for x in e]))
-    return str(e) if e is not None else ""
-
-
 def generate_cache_key(prev_layer, instruction, workdir, env, extra=""):
-    env_canonical = _env_to_canonical(env)
-    key_data = f"{prev_layer}-{instruction}-{workdir}-{env_canonical}-{extra}"
+    key_data = f"{prev_layer}-{instruction}-{workdir}-{env}-{extra}"
     return hashlib.sha256(key_data.encode()).hexdigest()
 
 

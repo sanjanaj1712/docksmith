@@ -3,7 +3,7 @@ from runtime import run_container
 
 
 def main():
-    # CLI: python3 cli.py run [-e KEY=VALUE] <name:tag>
+    # Minimal CLI for the test fixture
     if len(sys.argv) < 2:
         print("Usage: python3 cli.py run [-e KEY=VALUE] <name:tag>")
         return

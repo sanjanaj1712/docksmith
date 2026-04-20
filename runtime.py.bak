@@ -1,0 +1,97 @@
+import os
+import json
+import tarfile
+import subprocess
+import shutil
+
+
+def run_container(name_tag, extra_env=None):
+    name, tag = name_tag.split(":")
+    image_path = os.path.expanduser(f"~/.docksmith/images/{name}_{tag}.json")
+
+    if not os.path.exists(image_path):
+        print("Image not found")
+        return
+
+    with open(image_path, "r") as f:
+        manifest = json.load(f)
+
+    layers = manifest["layers"]
+
+    temp_fs = "/tmp/docksmith_runtime"
+    if os.path.exists(temp_fs):
+        shutil.rmtree(temp_fs)
+    os.makedirs(temp_fs)
+
+    layers_dir = os.path.expanduser("~/.docksmith/layers")
+
+    # =========================
+    # EXTRACT LAYERS IN ORDER
+    # =========================
+    for layer in layers:
+        digest = layer["digest"] if isinstance(layer, dict) else layer
+        layer_path = os.path.join(layers_dir, digest + ".tar")
+
+        if not os.path.exists(layer_path):
+            print(f"Missing layer: {digest}")
+            shutil.rmtree(temp_fs)
+            return
+
+        with tarfile.open(layer_path, "r") as tar:
+            tar.extractall(temp_fs)
+
+    config = manifest.get("config", {})
+
+    cmd = config.get("Cmd")
+    if not cmd:
+        print("No CMD specified in image")
+        shutil.rmtree(temp_fs)
+        return
+
+    workdir = config.get("WorkingDir", "/")
+    actual_workdir = os.path.join(temp_fs, workdir.lstrip("/"))
+
+    # Create workdir if it doesn't exist instead of hard failing
+    os.makedirs(actual_workdir, exist_ok=True)
+
+    # =========================
+    # ENV SETUP
+    # =========================
+    # Start with a clean base env (PATH at minimum so commands resolve)
+    env_vars = {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "HOME": actual_workdir,
+    }
+
+    for env in config.get("Env", []):
+        if "=" in env:
+            key, value = env.split("=", 1)
+            env_vars[key] = value
+
+    if extra_env:
+        for env in extra_env:
+            if "=" in env:
+                key, value = env.split("=", 1)
+                env_vars[key] = value
+
+    print(f"\nRunning command: {' '.join(cmd)}")
+    print(f"Working directory: {actual_workdir}\n")
+
+    # =========================
+    # RUN CMD
+    # =========================
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=actual_workdir,
+            env=env_vars
+        )
+        if result.returncode != 0:
+            print(f"\n[WARN] Container exited with code {result.returncode}")
+    except FileNotFoundError:
+        print(f"Error: command not found: {cmd[0]}")
+        print("Hint: the binary must exist inside the container filesystem")
+    except Exception as e:
+        print(f"Runtime error: {e}")
+    finally:
+        shutil.rmtree(temp_fs)  # always cleanup, even on error

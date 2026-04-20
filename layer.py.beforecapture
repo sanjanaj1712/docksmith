@@ -1,7 +1,6 @@
 import shutil
 import os
 import subprocess
-import tempfile
 import tarfile
 import hashlib
 
@@ -50,24 +49,11 @@ def handle_run(command, temp_fs):
     """
     Runs command inside an isolated ephemeral root created from temp_fs using sandboxing.
     Falls back to running in the temp_fs cwd when sandbox tools aren't available (macOS dev fallback).
-    """    # Prefer running in sandbox and capture merged overlay changes back into temp_fs
+    """
     try:
-        # capture_dir will receive files created/modified in the merged overlay
-        capture_dir = tempfile.mkdtemp(prefix="docksmith-capture-")
-        rc = run_in_sandbox(temp_fs, command, capture_dir=capture_dir)
+        rc = run_in_sandbox(temp_fs, command)
         if rc != 0:
             raise subprocess.CalledProcessError(rc, command)
-
-        # Copy captured files back into temp_fs so they are included in the next layer
-        for root, dirs, files in os.walk(capture_dir):
-            for f in files:
-                cap_path = os.path.join(root, f)
-                rel = os.path.relpath(cap_path, capture_dir)
-                dest_path = os.path.join(temp_fs, rel)
-                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-                shutil.copy2(cap_path, dest_path)
-
-        shutil.rmtree(capture_dir, ignore_errors=True)
         return
     except RuntimeError as e:
         # Sandbox not available on this host — fallback to running in the temp_fs (dev only)
@@ -76,7 +62,7 @@ def handle_run(command, temp_fs):
         # Command not found in sandbox; fall back
         print("[SANDBOX FALLBACK] command/tool not found")
 
-    # macOS / fallback: run command in temp_fs as cwd (writes are already on host temp_fs)
+    # macOS / fallback: run command in temp_fs as cwd
     env = os.environ.copy()
     env["HOME"] = temp_fs
 

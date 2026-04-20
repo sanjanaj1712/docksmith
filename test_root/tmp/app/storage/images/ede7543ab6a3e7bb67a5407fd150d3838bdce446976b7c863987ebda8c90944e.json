@@ -1,0 +1,11 @@
+{
+  "layers": [
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "13452706def3ecdbe2b5b85bb45322a119d5d4c1ca77543e0b5956d117186d7c"
+  ],
+  "env": {
+    "TEST": "123"
+  },
+  "cmd": "[\"python3\", \"app.py\"]",
+  "workdir": "temp_fs/tmp/app"
+}
